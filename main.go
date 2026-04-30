@@ -5,23 +5,153 @@ package main
 
 import (
 	"fmt"
-	"time"
+	"os"
+	"os/exec"
+	"strconv"
+	"strings"
 
-	"iHertz/cpu"
+	"fyne.io/fyne"
+	"fyne.io/fyne/app"
+	"fyne.io/fyne/container"
+	"fyne.io/fyne/widget"
 )
 
-func main() {
-	for {
-		info := cpu.GetInfo()
+func setAllCPUMaxFreq(freqKHz uint64) error {
+	entries, err := os.ReadDir("/sys/devices/system/cpu")
+	if err != nil {
+		return err
+	}
 
-		fmt.Print("\033[H\033[2J")
-
-		fmt.Println("Cores:", info.Cores)
-
-		for i, f := range info.Freqs {
-			fmt.Printf("CPU %d: %.2f GHz\n", i, f)
+	for _, entry := range entries {
+		name := entry.Name()
+		// กรองเฉพาะ cpu0, cpu1, cpu2, ...
+		if !strings.HasPrefix(name, "cpu") {
+			continue
+		}
+		var idx int
+		if _, err := fmt.Sscanf(name, "cpu%d", &idx); err != nil {
+			continue
 		}
 
-		time.Sleep(300 * time.Millisecond)
+		path := fmt.Sprintf("/sys/devices/system/cpu/%s/cpufreq/scaling_max_freq", name)
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			continue // บาง CPU ไม่มี cpufreq
+		}
+
+		if err := os.WriteFile(path, []byte(strconv.FormatUint(freqKHz, 10)), 0644); err != nil {
+			return fmt.Errorf("cpu%d: %w", idx, err)
+		}
 	}
+	return nil
+}
+
+func setGovernor(cpuIndex int, governor string) error {
+	path := fmt.Sprintf("/sys/devices/system/cpu/cpu%d/cpufreq/scaling_governor", cpuIndex)
+	return os.WriteFile(path, []byte(governor), 0644)
+}
+
+// setCPUMaxFreq ตั้งความถี่สูงสุดของ CPU core ที่ระบุ (หน่วย: kHz)
+func setCPUMaxFreq(cpuIndex int, freqKHz uint64) error {
+	path := fmt.Sprintf("/sys/devices/system/cpu/cpu%d/cpufreq/scaling_max_freq", cpuIndex)
+	return os.WriteFile(path, []byte(strconv.FormatUint(freqKHz, 10)), 0644)
+}
+
+// setCPUMinFreq ตั้งความถี่ต่ำสุด
+func setCPUMinFreq(cpuIndex int, freqKHz uint64) error {
+	path := fmt.Sprintf("/sys/devices/system/cpu/cpu%d/cpufreq/scaling_min_freq", cpuIndex)
+	return os.WriteFile(path, []byte(strconv.FormatUint(freqKHz, 10)), 0644)
+}
+
+// getCPUFreqInfo อ่านข้อมูลความถี่ของ CPU
+func getCPUFreqInfo(cpuIndex int) {
+	base := fmt.Sprintf("/sys/devices/system/cpu/cpu%d/cpufreq/", cpuIndex)
+	files := map[string]string{
+		"scaling_cur_freq": "ความถี่ปัจจุบัน",
+		"scaling_max_freq": "ความถี่สูงสุด (เพดาน)",
+		"scaling_min_freq": "ความถี่ต่ำสุด",
+		"cpuinfo_max_freq": "ความถี่สูงสุดของ hardware",
+		"scaling_governor": "governor ที่ใช้อยู่",
+	}
+
+	for file, label := range files {
+		data, err := os.ReadFile(base + file)
+		if err != nil {
+			fmt.Printf("  %s: ไม่สามารถอ่านได้\n", label)
+			continue
+		}
+		fmt.Printf("  %s: %s", label, strings.TrimSpace(string(data)))
+		if strings.Contains(file, "freq") {
+			val, _ := strconv.ParseFloat(strings.TrimSpace(string(data)), 64)
+			fmt.Printf(" kHz (%.2f GHz)", val/1e6)
+		}
+		fmt.Println()
+	}
+}
+
+func setCPUMaxFreqWithAuth(freqKHz uint64) error {
+	script := fmt.Sprintf(
+		"echo %d | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_max_freq",
+		freqKHz,
+	)
+
+	cmd := exec.Command("pkexec", "bash", "-c", script)
+	return cmd.Run()
+}
+
+func onButtonClick() {
+	freq := uint64(2000000) // อ่านจาก input field
+
+	go func() { // รันใน goroutine ไม่ให้ UI ค้าง
+		script := fmt.Sprintf(
+			"echo %d | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_max_freq",
+			freq,
+		)
+		cmd := exec.Command("pkexec", "bash", "-c", script)
+		err := cmd.Run()
+		if err != nil {
+			// แสดง error dialog
+			fmt.Println("ล้มเหลว")
+
+		}
+		// แสดง success dialog
+		fmt.Println("สำเร็จ 2GHz")
+	}()
+}
+
+func main() {
+
+	a := app.NewWithID("com.nawakarit.iHertz")
+	w := a.NewWindow("iHertz")
+
+	/*
+	   fmt.Println("=== ข้อมูล CPU0 ===")
+	   getCPUFreqInfo(0)
+
+	   // ตัวอย่าง: ตั้งเพดานที่ 2.0 GHz = 2,000,000 kHz
+	   targetFreq := uint64(2_000_000)
+	   fmt.Printf("\nตั้งเพดานความถี่ CPU0 เป็น %.1f GHz...\n", float64(targetFreq)/1e6)
+
+	   	if err := setCPUMaxFreq(0, targetFreq); err != nil {
+	   		fmt.Printf("เกิดข้อผิดพลาด: %v (ต้องรันด้วย root)\n", err)
+	   		return
+	   	}
+
+	   // governor ที่ใช้บ่อย: "powersave", "performance", "schedutil", "ondemand"
+	   setGovernor(0, "powersave")
+	   fmt.Println("สำเร็จ!")
+	*/
+	bt1 := widget.NewButton("TTT", func() {
+		onButtonClick()
+	})
+
+	w.SetContent(container.NewBorder(
+		nil,
+		nil,
+		nil,
+		nil,
+		bt1),
+	)
+
+	w.Resize(fyne.NewSize(200, 200))
+	w.ShowAndRun()
 }
