@@ -11,12 +11,18 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 
-	"fyne.io/fyne"
-	"fyne.io/fyne/app"
-	"fyne.io/fyne/container"
-	"fyne.io/fyne/widget"
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/widget"
+
+	//"github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/v3/cpu"
 )
+
+//-------------------------------------------------------------------------------------------
 
 func setAllCPUMaxFreq(freqKHz uint64) error {
 	entries, err := os.ReadDir("/sys/devices/system/cpu")
@@ -155,6 +161,11 @@ var enJSON []byte
 //go:embed assets/lang/THAI.json
 var thJSON []byte
 
+func getCPU() float64 {
+	v, _ := cpu.Percent(0, false)
+	return v[0] / 100.0 // แปลงเป็น 0.0 - 1.0
+}
+
 // ============================================================================
 // MAIN
 // ============================================================================
@@ -166,36 +177,56 @@ func main() {
 	w := a.NewWindow("iHertz")
 	w.SetIcon(icon)
 
-	ProgressCpu0 := widget.NewProgressBar()
+	//w.Resize(fyne.NewSize(200, 200))
+
+	bar := widget.NewProgressBar()
+	label := widget.NewLabel("0%")
+
+	//w.SetContent(container.NewVBox(bar, label))
+	w.Resize(fyne.NewSize(300, 100))
+
+	go func() {
+		for {
+			val := getCPU()
+
+			// อัปเดต UI
+			bar.SetValue(val)
+			label.SetText(fmt.Sprintf("%.0f%%", val*100))
+
+			time.Sleep(500 * time.Millisecond)
+		}
+	}()
+
+	//ProgressCpu0 := widget.NewProgressBar()
 	fmt.Println("=== ข้อมูล CPU0 ===")
 
+	//globalProgress.SetValue(float64(fi) / float64(totalFolders))
 	getCPUFreqInfo(0)
+	/*
+		// ตัวอย่าง: ตั้งเพดานที่ 2.0 GHz = 2,000,000 kHz
+		targetFreq := uint64(2_000_000)
+		fmt.Printf("\nตั้งเพดานความถี่ CPU0 เป็น %.1f GHz...\n", float64(targetFreq)/1e6)
 
-	// ตัวอย่าง: ตั้งเพดานที่ 2.0 GHz = 2,000,000 kHz
-	targetFreq := uint64(2_000_000)
-	fmt.Printf("\nตั้งเพดานความถี่ CPU0 เป็น %.1f GHz...\n", float64(targetFreq)/1e6)
+		if err := setCPUMaxFreq(0, targetFreq); err != nil {
+			fmt.Printf("เกิดข้อผิดพลาด: %v (ต้องรันด้วย root)\n", err)
+			return
+		}
 
-	if err := setCPUMaxFreq(0, targetFreq); err != nil {
-		fmt.Printf("เกิดข้อผิดพลาด: %v (ต้องรันด้วย root)\n", err)
-		return
-	}
-
-	// governor ที่ใช้บ่อย: "powersave", "performance", "schedutil", "ondemand"
-	setGovernor(0, "powersave")
-	fmt.Println("สำเร็จ!")
-
+		// governor ที่ใช้บ่อย: "powersave", "performance", "schedutil", "ondemand"
+		setGovernor(0, "powersave")
+		fmt.Println("สำเร็จ!")
+	*/
 	bt1 := widget.NewButton("TTT", func() {
 		onButtonClick()
 	})
 
 	w.SetContent(container.NewBorder(
-		nil,
+		container.NewVBox(bar, label),
 		nil,
 		nil,
 		nil,
 		bt1),
 	)
 
-	w.Resize(fyne.NewSize(200, 200))
 	w.ShowAndRun()
 }
