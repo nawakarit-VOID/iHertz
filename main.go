@@ -4,7 +4,9 @@
 package main
 
 import (
+	"embed"
 	"fmt"
+	"image/color"
 	"os"
 	"os/exec"
 	"strconv"
@@ -118,28 +120,70 @@ func onButtonClick() {
 	}()
 }
 
+// โหลด icon
+func loadIcon(size int) fyne.Resource {
+	var file string
+
+	switch {
+	case size >= 512:
+		file = "icons/icon-512.png" ///ที่อยู่
+	case size >= 256:
+		file = "icons/icon-256.png"
+	case size >= 128:
+		file = "icons/icon-128.png"
+	default:
+		file = "icons/icon-64.png"
+	}
+
+	data, _ := iconFS.ReadFile(file)
+	return fyne.NewStaticResource(file, data)
+}
+
+//go:embed icons/*
+var iconFS embed.FS
+
+//go:embed assets/font/Itim-Regular.ttf
+var fontItim []byte
+var myFont = fyne.NewStaticResource("Itim-Regular.ttf", fontItim)
+
+var overlayW = color.NRGBA{250, 0, 0, 80}
+var overlayB = color.NRGBA{0, 0, 0, 80}
+
+//go:embed assets/lang/English.json
+var enJSON []byte
+
+//go:embed assets/lang/THAI.json
+var thJSON []byte
+
+// ============================================================================
+// MAIN
+// ============================================================================
+
 func main() {
 
 	a := app.NewWithID("com.nawakarit.iHertz")
+	icon := loadIcon(64)
 	w := a.NewWindow("iHertz")
+	w.SetIcon(icon)
 
-	/*
-	   fmt.Println("=== ข้อมูล CPU0 ===")
-	   getCPUFreqInfo(0)
+	ProgressCpu0 := widget.NewProgressBar()
+	fmt.Println("=== ข้อมูล CPU0 ===")
 
-	   // ตัวอย่าง: ตั้งเพดานที่ 2.0 GHz = 2,000,000 kHz
-	   targetFreq := uint64(2_000_000)
-	   fmt.Printf("\nตั้งเพดานความถี่ CPU0 เป็น %.1f GHz...\n", float64(targetFreq)/1e6)
+	getCPUFreqInfo(0)
 
-	   	if err := setCPUMaxFreq(0, targetFreq); err != nil {
-	   		fmt.Printf("เกิดข้อผิดพลาด: %v (ต้องรันด้วย root)\n", err)
-	   		return
-	   	}
+	// ตัวอย่าง: ตั้งเพดานที่ 2.0 GHz = 2,000,000 kHz
+	targetFreq := uint64(2_000_000)
+	fmt.Printf("\nตั้งเพดานความถี่ CPU0 เป็น %.1f GHz...\n", float64(targetFreq)/1e6)
 
-	   // governor ที่ใช้บ่อย: "powersave", "performance", "schedutil", "ondemand"
-	   setGovernor(0, "powersave")
-	   fmt.Println("สำเร็จ!")
-	*/
+	if err := setCPUMaxFreq(0, targetFreq); err != nil {
+		fmt.Printf("เกิดข้อผิดพลาด: %v (ต้องรันด้วย root)\n", err)
+		return
+	}
+
+	// governor ที่ใช้บ่อย: "powersave", "performance", "schedutil", "ondemand"
+	setGovernor(0, "powersave")
+	fmt.Println("สำเร็จ!")
+
 	bt1 := widget.NewButton("TTT", func() {
 		onButtonClick()
 	})
