@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Nawakarit
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License v3.0.
+
 package main
 
 import (
@@ -8,7 +9,6 @@ import (
 	"image/color"
 	"log"
 	"math"
-	"runtime"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -20,37 +20,59 @@ import (
 )
 
 //////////////////////////////////////////////////
-// 🔥 Single Core Graph
+// 🔥 MultiGraph Wave
 //////////////////////////////////////////////////
 
-type Graph struct {
+type MultiGraph struct {
 	img    *image.RGBA
 	w, h   int
 	maxVal float64
 
-	color  color.RGBA
-	prevY  float64
-	smooth float64
+	colors []color.RGBA
+	prevY  []float64
+	smooth []float64
 }
 
-func NewGraph(w, h int, col color.RGBA) *Graph {
+func NewMultiGraph(w, h, cores int) *MultiGraph {
 	img := image.NewRGBA(image.Rect(0, 0, w, h))
 
-	g := &Graph{
+	baseColors := []color.RGBA{
+		{0, 255, 0, 255},
+		{0, 128, 255, 255},
+		{255, 0, 0, 255},
+		{255, 255, 0, 255},
+		{255, 0, 255, 255},
+		{0, 255, 255, 255},
+		{255, 128, 0, 255},
+		{128, 255, 0, 255},
+	}
+
+	colors := make([]color.RGBA, cores)
+	for i := 0; i < cores; i++ {
+		colors[i] = baseColors[i%len(baseColors)]
+	}
+
+	g := &MultiGraph{
 		img:    img,
 		w:      w,
 		h:      h,
 		maxVal: 100,
-		color:  col,
-		prevY:  float64(h),
-		smooth: 0,
+		colors: colors,
+		prevY:  make([]float64, cores),
+		smooth: make([]float64, cores),
+	}
+
+	// init
+	for i := range g.prevY {
+		g.prevY[i] = float64(h)
+		g.smooth[i] = 0
 	}
 
 	g.clear()
 	return g
 }
 
-func (g *Graph) clear() {
+func (g *MultiGraph) clear() {
 	for i := 0; i < len(g.img.Pix); i += 4 {
 		g.img.Pix[i+0] = 0
 		g.img.Pix[i+1] = 0
@@ -59,14 +81,17 @@ func (g *Graph) clear() {
 	}
 }
 
-func (g *Graph) shiftLeft() {
+// 🔥 shift pixel (เร็วมาก)
+func (g *MultiGraph) shiftLeft() {
 	for y := 0; y < g.h; y++ {
 		row := y * g.img.Stride
+
 		copy(
 			g.img.Pix[row:row+(g.w-1)*4],
 			g.img.Pix[row+4:row+g.w*4],
 		)
 
+		// clear ขวาสุด
 		idx := row + (g.w-1)*4
 		g.img.Pix[idx+0] = 0
 		g.img.Pix[idx+1] = 0
@@ -75,33 +100,43 @@ func (g *Graph) shiftLeft() {
 	}
 }
 
-func (g *Graph) draw(v float64) {
-	// smoothing
-	g.smooth = g.smooth*0.7 + v*0.3
-
-	y := float64(g.h) - (g.smooth/g.maxVal)*float64(g.h)
-
+// 🎯 draw wave + glow + smooth
+func (g *MultiGraph) draw(values []float64) {
 	x := g.w - 1
-	prev := g.prevY
 
-	// glow
-	drawLine(g.img, x-1, int(prev), x, int(y), fade(g.color, 60))
-	drawLine(g.img, x-1, int(prev+1), x, int(y+1), fade(g.color, 40))
-	drawLine(g.img, x-1, int(prev-1), x, int(y-1), fade(g.color, 40))
+	for i, v := range values {
+		if i >= len(g.colors) {
+			break
+		}
 
-	// main
-	drawLine(g.img, x-1, int(prev), x, int(y), g.color)
+		// 🔥 smoothing (EMA)
+		g.smooth[i] = g.smooth[i]*0.7 + v*0.3
 
-	g.prevY = y
+		// map → Y
+		y := float64(g.h) - (g.smooth[i]/g.maxVal)*float64(g.h)
+
+		col := g.colors[i]
+		prev := g.prevY[i]
+
+		// 🌈 glow (วาดหลายชั้น)
+		drawLine(g.img, x-1, int(prev), x, int(y), fade(col, 60))
+		drawLine(g.img, x-1, int(prev+1), x, int(y+1), fade(col, 40))
+		drawLine(g.img, x-1, int(prev-1), x, int(y-1), fade(col, 40))
+
+		// 🎯 เส้นหลัก (คม)
+		drawLine(g.img, x-1, int(prev), x, int(y), col)
+
+		g.prevY[i] = y
+	}
 }
 
-func (g *Graph) Update(v float64) {
+func (g *MultiGraph) Update(values []float64) {
 	g.shiftLeft()
-	g.draw(v)
+	g.draw(values)
 }
 
 //////////////////////////////////////////////////
-// ✏️ draw line
+// ✏️ draw line (Bresenham)
 //////////////////////////////////////////////////
 
 func drawLine(img *image.RGBA, x1, y1, x2, y2 int, c color.RGBA) {
@@ -165,60 +200,31 @@ func getCPU() []float64 {
 
 func main() {
 	a := app.New()
-	w := a.NewWindow("Per-Core Monitor")
+	w := a.NewWindow("Wave Multi-Core Monitor")
 
-	coreCount := runtime.NumCPU()
+	graph := NewMultiGraph(900, 300, 8)
 
-	colors := []color.RGBA{
-		{0, 255, 0, 255},
-		{0, 128, 255, 255},
-		{255, 0, 0, 255},
-		{255, 255, 0, 255},
-		{255, 0, 255, 255},
-		{0, 255, 255, 255},
-		{255, 128, 0, 255},
-		{128, 255, 0, 255},
-	}
+	raster := canvas.NewRaster(func(w, h int) image.Image {
+		return graph.img
+	})
 
-	graphs := make([]*Graph, coreCount)
-	rasters := make([]fyne.CanvasObject, coreCount)
-
-	for i := 0; i < coreCount; i++ {
-		g := NewGraph(300, 120, colors[i%len(colors)])
-		graphs[i] = g
-
-		r := canvas.NewRaster(func(w, h int) image.Image {
-			return g.img
-		})
-
-		rasters[i] = r
-	}
-
-	// 🔥 layout เป็น grid
-	content := container.NewGridWithColumns(2, rasters...)
-
-	w.SetContent(content)
-	w.Resize(fyne.NewSize(650, 500))
+	w.Resize(fyne.NewSize(900, 300))
 
 	go func() {
 		for {
 			values := getCPU()
-
-			for i := range graphs {
-				if i < len(values) {
-					graphs[i].Update(values[i])
-				}
+			if len(values) > 0 {
+				graph.Update(values)
 			}
 
+			// ต้องใช้ Fyne v2.4+
 			fyne.Do(func() {
-				for _, r := range rasters {
-					r.Refresh()
-				}
+				raster.Refresh()
 			})
 
-			time.Sleep(80 * time.Millisecond)
+			time.Sleep(100 * time.Millisecond) // ~20 FPS
 		}
 	}()
-
+	w.SetContent(container.NewBorder(nil, nil, nil, nil, raster))
 	w.ShowAndRun()
 }
