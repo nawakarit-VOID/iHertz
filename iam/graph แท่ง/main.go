@@ -147,21 +147,10 @@ func loadIcon(size int) fyne.Resource {
 	return fyne.NewStaticResource(file, data)
 }
 
-//go:embed icons/*
 var iconFS embed.FS
-
-//go:embed assets/font/Itim-Regular.ttf
-var fontItim []byte
-var myFont = fyne.NewStaticResource("Itim-Regular.ttf", fontItim)
 
 var overlayW = color.NRGBA{250, 0, 0, 80}
 var overlayB = color.NRGBA{0, 0, 0, 80}
-
-//go:embed assets/lang/English.json
-var enJSON []byte
-
-//go:embed assets/lang/THAI.json
-var thJSON []byte
 
 //////////////////////////////////////////////////
 // 🔥 MultiGraph (single buffer, multi-line)
@@ -296,6 +285,41 @@ func main() {
 	w.SetIcon(icon)
 	//w.Resize(fyne.NewSize(300, 100))
 
+	//w.Resize(fyne.NewSize(200, 200))
+	//data := binding.NewFloat()
+	//bar := widget.NewProgressBar()
+	//label := widget.NewLabel("0%")
+	//bar := widget.NewProgressBarWithData(data)
+	//label := widget.NewLabelWithData(binding.FloatToString(data))
+	//w.SetContent(container.NewVBox(bar, label))
+	/*
+		go func() {
+			for {
+				val := getCPU() // 0.0 - 1.0
+				data.Set(val)   // ✅ thread-safe
+				time.Sleep(500 * time.Millisecond)
+			}
+		}()
+	*/
+	//ProgressCpu0 := widget.NewProgressBar()
+	//fmt.Println("=== ข้อมูล CPU0 ===")
+
+	//globalProgress.SetValue(float64(fi) / float64(totalFolders))
+	//getCPUFreqInfo(0)
+	/*
+		// ตัวอย่าง: ตั้งเพดานที่ 2.0 GHz = 2,000,000 kHz
+		targetFreq := uint64(2_000_000)
+		fmt.Printf("\nตั้งเพดานความถี่ CPU0 เป็น %.1f GHz...\n", float64(targetFreq)/1e6)
+
+		if err := setCPUMaxFreq(0, targetFreq); err != nil {
+			fmt.Printf("เกิดข้อผิดพลาด: %v (ต้องรันด้วย root)\n", err)
+			return
+		}
+
+		// governor ที่ใช้บ่อย: "powersave", "performance", "schedutil", "ondemand"
+		setGovernor(0, "powersave")
+		fmt.Println("สำเร็จ!")
+	*/
 	// สร้าง graph
 	graph := NewMultiGraph(800, 300, 8)
 
