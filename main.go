@@ -104,7 +104,7 @@ func main() {
 	}()
 
 	//container.NewBorder(nil,nil,nil,nil, getCPUFreqInfo(0))
-	getCPUFreqInfo(0)
+	//getCPUFreqInfo(0)
 	w.SetContent(container.NewBorder(
 		nil,
 		nil,

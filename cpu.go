@@ -191,7 +191,7 @@ type CoreCard struct {
 }
 
 func NewCoreCard(idx int, col color.RGBA) *CoreCard {
-	g := NewGraph(300, 120, col)
+	g := NewGraph(800, 120, col) //ย*ก (ย - เพิ่มพื้นที่ในการแสดงกราฟมากขึ้น)
 
 	r := canvas.NewRaster(func(w, h int) image.Image {
 		return g.img
