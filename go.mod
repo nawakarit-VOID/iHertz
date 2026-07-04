@@ -1,9 +1,10 @@
 module ihertz
 
-go 1.26.3
+go 1.26.4
 
 require (
 	fyne.io/fyne/v2 v2.7.4
+	github.com/klauspost/cpuid/v2 v2.4.0
 	github.com/shirou/gopsutil/v3 v3.24.5
 )
 
@@ -46,7 +47,7 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	golang.org/x/image v0.24.0 // indirect
 	golang.org/x/net v0.35.0 // indirect
-	golang.org/x/sys v0.30.0 // indirect
+	golang.org/x/sys v0.41.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

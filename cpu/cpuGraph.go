@@ -1,24 +1,19 @@
 // Copyright (c) 2026 Nawakarit
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License v3.0.
-package main
+package cpu
 
 import (
 	"fmt"
 	"image"
 	"image/color"
-	"log"
 	"math"
-	"os"
-	"strconv"
-	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/widget"
-	"github.com/shirou/gopsutil/v3/cpu"
 )
 
 //////////////////////////////////////////////////
@@ -80,15 +75,15 @@ func (g *Graph) draw(v float64) {
 	x := g.w - 1
 	prev := g.prevY
 
-	// 🔥 1. fill ก่อน (สำคัญ)
+	//  1. fill ก่อน (สำคัญ)
 	fillDown(g.img, x, int(y), g.h, fade(g.color, 90))
 
-	// 🔥 2. glow
+	//  2. glow
 	drawLine(g.img, x-1, int(prev), x, int(y), fade(g.color, 60))
 	drawLine(g.img, x-1, int(prev+1), x, int(y+1), fade(g.color, 40))
 	drawLine(g.img, x-1, int(prev-1), x, int(y-1), fade(g.color, 40))
 
-	// 🔥 3. เส้นหลัก (วาดทับสุดท้าย)
+	//  3. เส้นหลัก (วาดทับสุดท้าย)
 	drawLine(g.img, x-1, int(prev), x, int(y), g.color)
 
 	g.prevY = y
@@ -167,19 +162,6 @@ func fade(c color.RGBA, a uint8) color.RGBA {
 }
 
 //////////////////////////////////////////////////
-// 📊 CPU
-//////////////////////////////////////////////////
-
-func getCPU() []float64 {
-	v, err := cpu.Percent(0, true)
-	if err != nil {
-		log.Println(err)
-		return nil
-	}
-	return v
-}
-
-//////////////////////////////////////////////////
 // 🧩 Card
 //////////////////////////////////////////////////
 
@@ -200,63 +182,17 @@ func NewCoreCard(idx int, col color.RGBA) *CoreCard {
 	val := binding.NewFloat()
 
 	title := widget.NewLabel(fmt.Sprintf("Core %d", idx))
-	percent := widget.NewLabelWithData(binding.FloatToStringWithFormat(val, "%.0f%%"))
+	//percent := widget.NewLabelWithData(binding.FloatToStringWithFormat(val, "%.0f%%"))
 
-	top := container.NewBorder(nil, nil, title, percent)
+	//top := container.NewBorder(nil, nil, title, percent)
+	top := container.NewBorder(title, nil, nil, nil)
 
-	card := widget.NewCard("", "", container.NewBorder(top, nil, nil, nil, r))
-
+	//card := widget.NewCard("", "", container.NewBorder(top, nil, nil, nil, r))
+	card := widget.NewCard("", "", container.NewBorder(nil, nil, top, nil, r))
 	return &CoreCard{
 		root:   card,
 		graph:  g,
 		raster: r,
 		val:    val,
-	}
-}
-
-// ============================================================================
-// cpuinfo
-// ============================================================================
-
-func setGovernor(cpuIndex int, governor string) error {
-	path := fmt.Sprintf("/sys/devices/system/cpu/cpu%d/cpufreq/scaling_governor", cpuIndex)
-	return os.WriteFile(path, []byte(governor), 0644)
-}
-
-// setCPUMaxFreq ตั้งความถี่สูงสุดของ CPU core ที่ระบุ (หน่วย: kHz)
-func setCPUMaxFreq(cpuIndex int, freqKHz uint64) error {
-	path := fmt.Sprintf("/sys/devices/system/cpu/cpu%d/cpufreq/scaling_max_freq", cpuIndex)
-	return os.WriteFile(path, []byte(strconv.FormatUint(freqKHz, 10)), 0644)
-}
-
-// setCPUMinFreq ตั้งความถี่ต่ำสุด
-func setCPUMinFreq(cpuIndex int, freqKHz uint64) error {
-	path := fmt.Sprintf("/sys/devices/system/cpu/cpu%d/cpufreq/scaling_min_freq", cpuIndex)
-	return os.WriteFile(path, []byte(strconv.FormatUint(freqKHz, 10)), 0644)
-}
-
-// getCPUFreqInfo อ่านข้อมูลความถี่ของ CPU
-func getCPUFreqInfo(cpuIndex int) {
-	base := fmt.Sprintf("/sys/devices/system/cpu/cpu%d/cpufreq/", cpuIndex)
-	files := map[string]string{
-		"scaling_cur_freq": "ความถี่ปัจจุบัน",
-		"scaling_max_freq": "ความถี่สูงสุด (เพดาน)",
-		"scaling_min_freq": "ความถี่ต่ำสุด",
-		"cpuinfo_max_freq": "ความถี่สูงสุดของ hardware",
-		"scaling_governor": "governor ที่ใช้อยู่",
-	}
-
-	for file, label := range files {
-		data, err := os.ReadFile(base + file)
-		if err != nil {
-			fmt.Printf("  %s: ไม่สามารถอ่านได้\n", label)
-			continue
-		}
-		fmt.Printf("  %s: %s", label, strings.TrimSpace(string(data)))
-		if strings.Contains(file, "freq") {
-			val, _ := strconv.ParseFloat(strings.TrimSpace(string(data)), 64)
-			fmt.Printf(" kHz (%.2f GHz)", val/1e6)
-		}
-		fmt.Println()
 	}
 }
