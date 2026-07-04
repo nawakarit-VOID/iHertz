@@ -40,10 +40,10 @@ var myFont = fyne.NewStaticResource("Itim-Regular.ttf", fontItim)
 
 func CreateWindow() {
 
-	a := app.NewWithID("com.nawakarit.ihertz")
+	a := app.NewWithID("com.nawakarit.iHertz")
 	a.Settings().SetTheme(&MyTheme{})
 	icon := loadIcon(64)
-	w := a.NewWindow("ihertz")
+	w := a.NewWindow("iHertz")
 	w.SetIcon(icon)
 
 	cpuTabs := cpuinfo.CpuTabs(w)
