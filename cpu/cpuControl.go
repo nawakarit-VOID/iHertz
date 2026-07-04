@@ -700,7 +700,7 @@ performance - ประสิทธิภาพสูงสุด
 	selectedCoreCpu := container.NewVBox(
 		container.NewCenter(chekCpu),
 		//layout.NewSpacer(),
-		space,
+		//space,
 		container.NewCenter(
 			container.NewHBox(
 				//container.NewGridWrap(fyne.NewSize(150, 35), allCheck),
@@ -757,7 +757,6 @@ performance - ประสิทธิภาพสูงสุด
 
 	x := container.NewBorder(
 		container.NewVBox(
-			widget.NewCard("Default Kernel and Hardware", "", Info), //info,
 			//widget.NewSeparator(),
 			widget.NewCard("เลือกคอร์ CPU", "", selectedCoreCpu), //chekCpu,
 			widget.NewCard("โหมดการทำงาน", "", work),             //governors,
@@ -770,6 +769,7 @@ performance - ประสิทธิภาพสูงสุด
 					container.NewGridWrap(fyne.NewSize(200, 35), apply),
 					space),
 			),
+			widget.NewCard("Default Kernel and Hardware", "", Info), //info,
 			widget.NewCard("สถานะปัจจุบัน", "", now),
 			//widget.NewSeparator(),
 		),

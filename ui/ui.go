@@ -48,11 +48,9 @@ func CreateWindow() {
 
 	cpuTabs := cpuinfo.CpuTabs(w)
 
-	tabs := container.NewAppTabs(
-		container.NewTabItem("CPU", container.NewScroll(cpuTabs)),
-	)
+	tabs := container.NewScroll(cpuTabs)
 
 	w.SetContent(tabs)
-	w.Resize(fyne.NewSize(720, 800))
+	w.Resize(fyne.NewSize(720, 850))
 	w.ShowAndRun()
 }
