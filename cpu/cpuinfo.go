@@ -130,73 +130,7 @@ func (m *CPUMonitor) Start() {
 	}()
 }
 
-// ============================================================================
-// cache
-// ============================================================================
-// ฟังก์ชันประมวลผลค่าด้วย switch case
-func processValue(value int) (int, string) {
-	// ตัวอักษร flag ที่สัมผัส
-	var x string = ""
-	// ตรวจสอบเงื่อนไข //แบบ บนลงล่าง
-	switch {
-	case value >= 1099511627776:
-		value = value / 1099511627776
-		x = "TB"
-	case value >= 1073741824:
-		value = value / 1073741824
-		x = "GB"
-	case value >= 1048576:
-		value = value / 1048576
-		x = "MB"
-	case value >= 1000:
-		value = value / 1024
-		x = "KB"
-	default:
-		x = "B"
-	}
-	return value, x
-}
-
-// ============================================================================
-// เวลา
-// ============================================================================
-func processTimeS(value float64) (int, int, int) {
-
-	hours := int(value) / 3600            // หาชั่วโมง  (int หาร int จะเป็นการหารไม่เอาเศษโดยอัตโนมัติ) *หารไม่เอาเศษ
-	remainingSeconds := int(value) % 3600 //หาเศษวินาทีที่เหลือ *% หารเพื่อเอาเศษ
-	minutes := remainingSeconds / 60      //  นำเศษที่เหลือมาหาหน่วยนาที *แบบไม่เอาเศษและวินาทีสุดท้าย
-	seconds := remainingSeconds % 60      //และวินาทีสุดท้าย *หารเอาเศษ
-
-	return hours, minutes, seconds
-}
-
-// ============================================================================
-// หาค่าเฉลี่ย
-// ============================================================================
-func numSumAndCount(value []int) (int, int) {
-	sum := 0
-	count := 0
-	for _, x := range value {
-		sum += x
-		if x > 0 { // ถ้ามากกว่า 0 ให้นับเพิ่ม
-			count++
-		}
-	}
-	return sum, count
-}
-
-func Avg(value float64) (int, int, int) {
-	Core := CpuCoreCount()
-	a1 := int(value) / int(Core)
-	a2 := float64(a1)
-	b1, b2, b3 := processTimeS(a2)
-	return b1, b2, b3
-}
-
-// ============================================================================
-// กราฟ
-// ============================================================================
-
+// - // กราฟ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 func grid() fyne.CanvasObject {
 	coreCount := CpuCoreCount()
 
@@ -270,9 +204,9 @@ func CpuTabs(w fyne.Window) fyne.CanvasObject {
 			timesTotalAvg.SetText(fmt.Sprintf("%s", data.TimesTotalAvg))
 			timesSec.SetText(fmt.Sprintf("%s", data.TimesSec))
 			timesHms.SetText(fmt.Sprintf("%s", data.TimesHms))
-
 		})
 	})
+
 	monitor.Start() // เริ่ม monitoring
 
 	grid := grid()
