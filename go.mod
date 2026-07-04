@@ -4,7 +4,6 @@ go 1.26.4
 
 require (
 	fyne.io/fyne/v2 v2.7.4
-	github.com/klauspost/cpuid/v2 v2.4.0
 	github.com/shirou/gopsutil/v3 v3.24.5
 )
 
